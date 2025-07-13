@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create A Dino 2</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&family=Bungee&display=swap');
+        :root {--primary-color: #8A2BE2;--secondary-color: #00FFFF;--dark-bg: #12011f;--light-bg: #2a0b4d;--text-color: #f0f0f0;--danger-color: #FF3B30;--success-color: #34C759;}
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Exo 2', sans-serif; background-color: var(--dark-bg); background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0); background-size: 20px 20px; color: var(--text-color); min-height: 100vh; overflow: hidden; }
+        .container { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .game-title { font-family: 'Bungee', cursive; font-size: clamp(3rem, 10vw, 6rem); color: var(--secondary-color); text-shadow: 0 0 10px var(--secondary-color), 0 0 20px var(--secondary-color), 0 0 40px var(--primary-color); margin-bottom: 2rem; animation: flicker 3s ease-in-out infinite alternate; }
+        @keyframes flicker { 0%, 100% { opacity: 1; text-shadow: 0 0 10px var(--secondary-color), 0 0 20px var(--secondary-color), 0 0 40px var(--primary-color); } 50% { opacity: 0.8; text-shadow: 0 0 15px var(--secondary-color), 0 0 30px var(--secondary-color), 0 0 50px var(--primary-color); } }
+        .cyber-input, .cyber-button { background: transparent; color: var(--secondary-color); border: 2px solid var(--secondary-color); padding: 12px 25px; margin: 8px; border-radius: 5px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.3s ease; text-align: center; font-family: 'Exo 2', sans-serif; }
+        .cyber-input::placeholder { color: rgba(0, 255, 255, 0.5); }
+        .cyber-input:focus { outline: none; box-shadow: 0 0 15px var(--secondary-color); }
+        .cyber-button:hover { color: var(--dark-bg); background: var(--secondary-color); box-shadow: 0 0 20px var(--secondary-color); }
+        .game-interface { display: none; width: 100%; height: 100vh; padding: 15px; padding-top: 70px; padding-bottom: 90px; }
+        .top-bar { position: fixed; top: 0; left: 0; width: 100%; padding: 10px 15px; background: rgba(18, 1, 31, 0.8); backdrop-filter: blur(5px); display: flex; justify-content: space-between; align-items: center; z-index: 1000; border-bottom: 1px solid var(--primary-color); }
+        .money-display { font-size: 1.2rem; font-weight: bold; color: var(--secondary-color); text-shadow: 0 0 5px var(--secondary-color); }
+        #statusEffectsContainer { display: flex; gap: 8px; }
+        .status-effect { background: rgba(0,0,0,0.7); color: white; padding: 5px 8px; border-radius: 15px; font-size: 0.7rem; display: flex; align-items: center; gap: 5px; border: 1px solid var(--secondary-color); }
+        .main-view { width: 100%; height: 100%; padding: 20px; background: rgba(42, 11, 77, 0.3); border: 1px solid var(--primary-color); border-radius: 10px; overflow-y: auto; }
+        .incubators-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
+        .incubator { background: var(--dark-bg); border: 2px dashed var(--primary-color); border-radius: 10px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; font-size: 0.8rem; }
+        .incubator:hover { border-style: solid; background: var(--light-bg); }
+        .incubator.occupied { border-style: solid; border-color: var(--secondary-color); cursor: default; }
+        .egg-view { animation: subtle-bounce 3s ease-in-out infinite; }
+        @keyframes subtle-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .egg-info { text-align: center; color: var(--text-color); }
+        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; padding: 5px; background: rgba(18, 1, 31, 0.8); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; gap: 5px; z-index: 1000; border-top: 1px solid var(--primary-color); flex-wrap: wrap; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 1, 31, 0.9); z-index: 2000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+        .modal.show { opacity: 1; visibility: visible; }
+        .modal-content { background: var(--light-bg); border: 1px solid var(--primary-color); border-radius: 10px; padding: 25px; width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto; box-shadow: 0 0 30px var(--primary-color); position: relative; }
+        .close-btn { position: absolute; top: 10px; right: 10px; background: var(--danger-color); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
+        .tabs { display: flex; border-bottom: 1px solid var(--primary-color); margin-bottom: 15px; }
+        .tab-button { background: none; border: none; color: var(--text-color); padding: 10px 15px; cursor: pointer; font-size: 1rem; flex-grow: 1; }
+        .tab-button.active { color: var(--secondary-color); border-bottom: 2px solid var(--secondary-color); }
+        .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+        .item-card { background: var(--dark-bg); border: 1px solid var(--primary-color); border-radius: 5px; padding: 10px; text-align: center; cursor: pointer; transition: all .2s; font-size: 0.8rem; }
+        .item-card:hover { transform: scale(1.05); border-color: var(--secondary-color); }
+        .item-card.selected { border-color: var(--secondary-color); box-shadow: 0 0 10px var(--secondary-color); }
+        .item-card[data-training="true"] { opacity: 0.5; cursor: not-allowed; }
+        .notification { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); padding: 15px 25px; border-radius: 10px; color: white; font-weight: bold; z-index: 3000; transition: top 0.5s ease-in-out; border: 1px solid; }
+        .notification.show { top: 20px; }
+        .notification.success { background: var(--success-color); border-color: #fff; }
+        .notification.error { background: var(--danger-color); border-color: #fff; }
+        .notification.death { background: #333; border-color: var(--danger-color); }
+        .comment-section { margin-top: 20px; }
+        .comment { background: rgba(0,0,0,0.2); border-left: 3px solid var(--secondary-color); padding: 10px; margin-bottom: 5px; border-radius: 0 5px 5px 0; }
+        @media (max-width: 768px) { .cyber-button { padding: 10px 15px; font-size: 0.8rem; margin: 5px; } }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen" class="container">
+        <h1 class="game-title">CREATE A DINO 2</h1>
+        <input type="text" id="usernameInput" placeholder="Nome de Usuário" class="cyber-input" style="width:300px;">
+        <input type="password" id="accessCodeInput" placeholder="Código de Acesso" class="cyber-input" style="width:300px;">
+        <button class="cyber-button" onclick="handleLogin()">Acessar</button>
+    </div>
+    
+    <div id="gameInterface" class="game-interface">
+        <div class="top-bar">
+            <div class="money-display">💰 $<span id="money">500</span></div>
+            <div>
+                <button class="cyber-button" onclick="toggleView('incubatorsView')">Incubadoras</button>
+                <button class="cyber-button" onclick="toggleView('dnaLabView')">Laboratório</button>
+            </div>
+            <div id="statusEffectsContainer"></div>
+        </div>
+        
+        <div id="incubatorsView" class="main-view">
+            <h2>Incubadoras</h2>
+            <div class="incubators-container" id="incubatorsContainer"></div>
+        </div>
+        
+        <div id="dnaLabView" class="main-view" style="display: none;">
+            <h2>Laboratório de DNA</h2>
+            <p>Junte 10 fragmentos de DNA para clonar um ovo de graça!</p>
+            <div id="dnaLabContainer"></div>
+        </div>
+        
+        <div class="bottom-bar">
+            <button class="cyber-button" onclick="showModal('inventoryModal')">Inventário</button>
+            <button class="cyber-button" onclick="showModal('shopModal')">Loja</button>
+            <button class="cyber-button" onclick="showModal('sellModal')">Vender</button>
+            <button class="cyber-button" style="border-color: var(--danger-color); color: var(--danger-color);" onclick="showModal('robberyModal')">Roubar</button>
+            <button class="cyber-button" onclick="showModal('codesModal')">Códigos</button>
+        </div>
+    </div>
+    
+    <div id="inventoryModal" class="modal"><div class="modal-content"><button class="close-btn" onclick="closeModal('inventoryModal')">X</button><h2>Inventário</h2><div class="tabs"><button class="tab-button active" onclick="updateInventoryUI('eggs', this)">Ovos</button><button class="tab-button" onclick="updateInventoryUI('dinos', this)">Dinossauros</button></div><div id="inventoryGrid" class="item-grid"></div></div></div>
+    <div id="shopModal" class="modal"><div class="modal-content"><button class="close-btn" onclick="closeModal('shopModal')">X</button><h2>Loja</h2><div id="shopTimer" style="text-align:center; margin-bottom:10px;"></div><div class="tabs"><button class="tab-button active" onclick="updateShopUI('dinos', this)">Dinossauros</button><button class="tab-button" onclick="updateShopUI('gadgets', this)">Gadgets</button><button class="tab-button" onclick="updateShopUI('security', this)">Segurança</button></div><div id="shopGrid" class="item-grid"></div></div></div>
+    <div id="sellModal" class="modal"><div class="modal-content"><button class="close-btn" onclick="closeModal('sellModal')">X</button><h2>Vender Dinossauro</h2><p>Selecione um dinossauro para colocar à venda.</p><div id="sellGrid" class="item-grid"></div><hr style="margin: 15px 0; border-color: var(--primary-color);"><div id="commentSection" class="comment-section"></div></div></div>
+    <div id="statsModal" class="modal"><div class="modal-content"><button class="close-btn" onclick="closeModal('statsModal')">X</button><h2 id="statsTitle">Estatísticas</h2><div id="statsContent"></div><button class="cyber-button" id="trainButton" onclick="trainDino()">Treinar (24h)</button></div></div>
+    <div id="codesModal" class="modal"><div class="modal-content"><button class="close-btn" onclick="closeModal('codesModal')">X</button><h2>Códigos</h2><input type="text" id="codeInput" placeholder="Digite seu código aqui" class="cyber-input" style="width:100%;"><button class="cyber-button" onclick="submitCode()">Usar</button></div></div>
+    <div id="dailyRewardModal" class="modal"><div class="modal-content" style="text-align: center;"><h2 id="dailyRewardTitle">Recompensa Diária!</h2><p id="dailyRewardText"></p><button class="cyber-button" onclick="claimDailyReward()">Coletar</button></div></div>
+    <div id="robberyModal" class="modal"><div class="modal-content"><button class="close-btn" onclick="closeModal('robberyModal')">X</button><h2>Atacar Jogador</h2><input type="text" id="robberyTargetInput" placeholder="Nome de usuário do alvo" class="cyber-input" style="width:100%;"><button class="cyber-button" onclick="findRobberyTarget()">Procurar Alvo</button></div></div>
+    <div id="adminModal" class="modal"><div class="modal-content"><button class="close-btn" onclick="closeModal('adminModal')">X</button><h2>Painel do Administrador</h2><div id="adminContent" style="color:white; word-break: break-all;"></div></div></div>
+    <div id="notification" class="notification"></div>
+    
+<script>
+// =========================================================================
+// SEÇÃO 1: ESTADO GLOBAL E DEFINIÇÕES DE DADOS
+// =========================================================================
+let gameState = {}; let currentUser = null; let gameIntervals = {}; let currentStock = []; let selectedItem = { type: null, index: -1 };
+const defaultGameState = { money: 500, inventory: [], incubators: [null, null, null, null, null, null], itemsForSale: [], dnaFragments: {}, lastStockUpdate: 0, usedCodes: {}, lastDailyReward: null, consecutiveDays: 0, lastExitTime: Date.now(), deathChanceModifier: 1.0, activeBoosts: {}, cooldowns: {}, robberyStatus: {} };
+const dinosaurs = {'Compsognato':{price:300,time:300000,size:'pequeno'},'Velociraptor':{price:50000,time:3600000,size:'médio'},'Triceratops':{price:76000,time:5400000,size:'médio'},'Tiranossauro Rex':{price:500000,time:13800000,size:'grande'},'Indominus Rex':{price:600000,time:14000000,size:'grande'},'Pyroraptor':{price:52000,time:3900000,size:'médio'},'Gallimimus':{price:12000,time:1800000,size:'médio'},'Dilophosaurus':{price:25000,time:2400000,size:'pequeno'},'Ankylosaurus':{price:296285,time:8700000,size:'grande'},'Pteranodon':{price:95000,time:6000000,size:'médio'},'Brachiosaurus':{price:450000,time:11700000,size:'grande'},'Stegosaurus':{price:20000,time:2700000,size:'pequeno'},'Allosaurus':{price:350000,time:10000000,size:'grande'},'Carnotaurus':{price:288537,time:8100000,size:'grande'},'Giganotosaurus':{price:800000,time:12000000,size:'grande'},'Mosasaurus':{price:900000,time:13000000,size:'grande'},'Therizinosaurus':{price:420000,time:11000000,size:'grande'},'Baryonyx':{price:250000,time:7500000,size:'grande'},'Stygimoloch':{price:45000,time:3000000,size:'pequeno'},'Parasaurolophus':{price:200000,time:7200000,size:'médio'},'Iguanodon':{price:180000,time:6800000,size:'médio'},'Pachycephalosaurus':{price:325000,time:9900000,size:'grande'},'Argentinosaurus':{price:750000,time:15000000,size:'grande'},'Espinossauro':{price:950500,time:13800000,size:'grande'}};
+const securityItems = {'Bloqueador':{price:3000,dinoCost:null,description:'Bloqueia invasões por 1 hora.',duration:3600000,cooldown:3600000,emoji:'🛡️'},'Demora':{price:5000,dinoCost:{name:'Triceratops',count:1},description:'Aumenta tempo de roubo. Dura 1h.',duration:3600000,cooldown:7200000,emoji:'⏳'},'Falso':{price:15000,dinoCost:{name:'Triceratops',count:2},description:'O ladrão rouba uma isca. Dura 5h.',duration:18000000,cooldown:86400000,emoji:'🎭'}};
+const gadgets = {'Time Skip':{price:5000,description:'Avança o tempo em 1 hora.',cooldown:86400000},'Crescedor':{price:10000,description:'Choca um ovo instantaneamente.',cooldown:172800000},'Mutador':{price:20000,description:'Aumenta chance de mutações por 50 min.',duration:3000000,cooldown:259200000}};
+
+// =========================================================================
+// SEÇÃO 2: INICIALIZAÇÃO, LOGIN E LOOP PRINCIPAL
+// =========================================================================
+window.addEventListener('load', () => { document.getElementById('loginScreen').style.display = 'flex'; });
+function handleLogin() { const u=document.getElementById('usernameInput').value.trim(),p=document.getElementById('accessCodeInput').value.trim();if(!u||!p)return showNotification("Preencha todos os campos!","error");let s=JSON.parse(localStorage.getItem('cad2_users'))||{};if(s[u]){if(s[u]!==p)return showNotification("Código incorreto!","error");currentUser=u;initGameForUser();}else{s[u]=p;localStorage.setItem('cad2_users',JSON.stringify(s));currentUser=u;gameState={...defaultGameState,username:u};saveGameData();showNotification(`Conta '${u}' criada!`,'success');initGameForUser();}}
+function initGameForUser() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('gameInterface').style.display = 'block'; loadGameData(); updateStockIfNeeded(); Object.values(gameIntervals).forEach(clearInterval); gameIntervals.main = setInterval(gameTick, 1000); gameIntervals.save = setInterval(saveGameData, 5000); window.addEventListener('beforeunload', saveGameData); checkDailyReward(); }
+function gameTick() { updateIncubators(); processSales(); checkForTrainingCompletion(); checkForDeaths(); findDnaFragment(); updateStatusEffectsUI(); checkActiveEvents(); updateShopTimer(); }
+
+// =========================================================================
+// SEÇÃO 3: PERSISTÊNCIA DE DADOS (SAVE/LOAD)
+// =========================================================================
+function saveGameData() { if(!currentUser)return;gameState.lastExitTime=Date.now();localStorage.setItem(`cad2_save_${currentUser}`,JSON.stringify(gameState));}
+function loadGameData() { if(!currentUser)return;const s=localStorage.getItem(`cad2_save_${currentUser}`);if(s){const d=JSON.parse(s);gameState={...defaultGameState,...d};const o=Date.now()-gameState.lastExitTime;(gameState.incubators||[]).forEach(e=>{if(e)e.startTime-=o});(gameState.inventory||[]).forEach(i=>{if(i.isTraining)i.trainingStart-=o});(gameState.itemsForSale||[]).forEach(i=>{if(i.listTime)i.listTime-=o});}else{gameState={...defaultGameState,username:currentUser};}updateAllUI();}
+function loadTargetData(u){return JSON.parse(localStorage.getItem(`cad2_save_${u}`));}
+function saveTargetData(u,d){localStorage.setItem(`cad2_save_${u}`,JSON.stringify(d));}
+
+// =========================================================================
+// SEÇÃO 4: FUNÇÕES DE GERAÇÃO DE ATRIBUTOS
+// =========================================================================
+function generateStats(n,m=[],cD={}){return{name:n,customName:cD.customName||n,mutations:m,age:0,weight:generateWeight(n,m),size:generateSize(n,m),lifeExpectancy:generateLifeExpectancy(n,m),value:calculateValue(n,m,cD.valueMultiplier),appearance:generateAppearance(m),birthTime:Date.now()};}
+function generateWeight(n,m){let w=(dinosaurs[n]?.price/100)||1000;w+=(Math.random()-.5)*w*.2;if(m.includes('giant'))w*=1.2;return Math.round(w*100)/100;}
+function generateSize(n,m){let s=(dinosaurs[n]?.price/10000)||5;s+=(Math.random()-.5)*s*.15;if(m.includes('giant'))s*=1.2;return Math.round(s*100)/100;}
+function generateLifeExpectancy(n,m){let l=20+Math.random()*30;if(m.includes('colorful'))l*=.8;if(m.includes('ruby'))l*=2;return Math.round(l*gameState.deathChanceModifier);}
+function calculateValue(n,m,mult=1){let v=dinosaurs[n].price*mult;m.forEach(mu=>{switch(mu){case'golden':v*=1.2;break;case'diamond':v*=1.5;break;case'ruby':v*=2.5;break;}});return Math.round(v);}
+function generateAppearance(m){const a=['Normal','Robusto','Elegante','Feroz','Majestoso'];if(m.length>1)return"Exótico";if(m.includes('ruby'))return'Lendário';if(m.includes('diamond'))return'Cristalino';if(m.includes('golden'))return'Dourado';if(m.includes('colorful'))return'Iridescente';return a[Math.floor(Math.random()*a.length)];}
+function calculateHatchTime(n,m){let t=dinosaurs[n].time;if(gameState.activeBoosts.Flash&&Date.now()<gameState.activeBoosts.Flash.expires)t/=2;return t;}
+
+// =========================================================================
+// SEÇÃO 5: LÓGICA PRINCIPAL DO JOGO
+// =========================================================================
+function updateAllUI(){updateMoneyDisplay();updateIncubators();updateDnaLab();updateStatusEffectsUI();}
+function toggleView(viewId){document.querySelectorAll('.main-view').forEach(v=>v.style.display='none');document.getElementById(viewId).style.display='block';}
+function showModal(id){const m=document.getElementById(id);if(m){if(id==='inventoryModal')updateInventoryUI();if(id==='shopModal')updateShopUI();if(id==='sellModal')updateSellUI();m.classList.add('show');}}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+function updateMoneyDisplay(){document.getElementById('money').textContent=Math.floor(gameState.money).toLocaleString();}
+function updateInventoryUI(t='eggs',b){document.querySelectorAll('#inventoryModal .tab-button').forEach(btn=>btn.classList.remove('active'));const target=b||document.querySelector(`#inventoryModal .tab-button[onclick*="'${t}'"]`);target.classList.add('active');const g=document.getElementById('inventoryGrid');g.innerHTML='';const items=gameState.inventory.filter(i=>i.type===t);if(items.length===0){g.innerHTML=`<p style="grid-column:1/-1;text-align:center;">Nenhum item aqui.</p>`;return;}items.forEach(item=>{const i=gameState.inventory.indexOf(item);const c=document.createElement('div');c.className='item-card';c.dataset.index=i;if(item.isTraining)c.dataset.training="true";c.innerHTML=(item.type==='eggs')?`🥚<br><b>Ovo de ${item.dinoName}</b>`:`${item.mutations.includes('ruby')?'💎':'🦖'}<br><b>${item.customName}</b>`;c.onclick=()=>selectItem(item.type,i,c);g.appendChild(c);});}
+function switchInventoryTab(t,b){updateInventoryUI(t,b);}
+function selectItem(t,i,c){selectedItem={type:t,index:i};document.querySelectorAll('#inventoryGrid .item-card').forEach(card=>card.classList.remove('selected'));c.classList.add('selected');if(t==='dinos')showStats(i);}
+function updateIncubators(){const c=document.getElementById('incubatorsContainer');if(!c)return;c.innerHTML='';for(let i=0;i<6;i++){const d=document.createElement('div');d.className='incubator';const e=gameState.incubators[i];if(e){d.classList.add('occupied');const r=Math.max(0,(e.startTime+e.hatchTime)-Date.now());if(r<=0){hatchDinosaur(i);continue;}d.innerHTML=`<div class="egg-view">🥚</div><div class="egg-info"><b>${e.dinoName}</b><br>${new Date(r).toISOString().substr(11,8)}</div>`;}else{d.innerHTML=`<span>Vazio</span>`;d.onclick=()=>placeEggInIncubator(i);}c.appendChild(d);}}
+function placeEggInIncubator(idx){if(selectedItem.type!=='eggs'||selectedItem.index===-1)return showNotification("Selecione um ovo do inventário!","error");const eD=gameState.inventory[selectedItem.index];const b=gameState.activeBoosts.Mutador&&Date.now()<gameState.activeBoosts.Mutador.expires;const m=['golden','diamond','ruby','colorful'].filter(mu=>Math.random()<(b?0.6:0.1));gameState.incubators[idx]={dinoName:eD.dinoName,mutations:m,startTime:Date.now(),hatchTime:calculateHatchTime(eD.dinoName,m)};gameState.inventory.splice(selectedItem.index,1);selectedItem={type:null,index:-1};updateInventoryUI('eggs');updateIncubators();}
+function hatchDinosaur(i){const e=gameState.incubators[i];if(!e)return;const nD={type:'dinos',...generateStats(e.dinoName,e.mutations),isTraining:false};gameState.inventory.push(nD);gameState.incubators[i]=null;showNotification(`${e.dinoName} nasceu! 🦖`,"success");updateIncubators();}
+function updateStockIfNeeded(){if(Date.now()-gameState.lastStockUpdate>=600000){generateStock();gameState.lastStockUpdate=Date.now();showNotification("A loja foi reabastecida!",'success');}}
+function generateStock(){const d=Object.keys(dinosaurs);currentStock=d.sort(()=>.5-Math.random()).slice(0,Math.floor(Math.random()*10)+10);if(!gameState.usedCodes.StarterPack&&!currentStock.includes('Compsognato')){currentStock.pop();currentStock.unshift('Compsognato');}}
+function updateShopUI(t='dinos',b){document.querySelectorAll('#shopModal .tab-button').forEach(btn=>btn.classList.remove('active'));const target=b||document.querySelector(`#shopModal .tab-button[onclick*="'${t}'"]`);target.classList.add('active');const g=document.getElementById('shopGrid');g.innerHTML='';let src={};if(t==='dinos')src=dinosaurs;else if(t==='gadgets')src=gadgets;else if(t==='security')src=securityItems;Object.keys(src).forEach(k=>{const item=src[k];const c=document.createElement('div');c.className='item-card';let content=`<b>${k}</b><br>$${item.price.toLocaleString()}`;const inStock=t==='dinos'?currentStock.includes(k):true;if(item.description)content+=`<br><small>${item.description}</small>`;if(!inStock)c.style.opacity='0.5';c.innerHTML=content;c.onclick=()=>buyItem(t,k);g.appendChild(c);});}
+function switchShopTab(t,b){updateShopUI(t,b);}
+function buyItem(t,k){const iD=(t==='dinos')?dinosaurs[k]:(t==='gadgets')?gadgets[k]:securityItems[k];if(t==='dinos'&&!currentStock.includes(k))return showNotification("Fora de estoque!","error");if(gameState.money<iD.price)return showNotification("Dinheiro insuficiente!","error");if(t==='security'&&iD.dinoCost){const dC=gameState.inventory.filter(d=>d.name===iD.dinoCost.name).length;if(dC<iD.dinoCost.count)return showNotification(`Você precisa de ${iD.dinoCost.count} ${iD.dinoCost.name}(s)!`,'error');for(let i=0;i<iD.dinoCost.count;i++)gameState.inventory.splice(gameState.inventory.findIndex(d=>d.name===iD.dinoCost.name),1);}gameState.money-=iD.price;if(t==='dinos'){gameState.inventory.push({type:'eggs',dinoName:k});showNotification(`Ovo de ${k} comprado!`,"success");}else if(t==='security'||t==='gadgets'){if(iD.duration)gameState.activeBoosts[k]={expires:Date.now()+iD.duration};if(iD.cooldown)gameState.cooldowns[k]=Date.now()+(iD.duration||0)+iD.cooldown;showNotification(`${k} comprado!`,"success");}updateMoneyDisplay();}
+function updateShopTimer(){const t=document.getElementById('shopTimer');if(!t)return;const r=600000-(Date.now()-gameState.lastStockUpdate);if(r>0)t.innerHTML=`Próximo estoque em: ${new Date(r).toISOString().substr(14,5)}`;else t.innerHTML=`Reabastecendo...`;}
+function updateSellUI(){const g=document.getElementById('sellGrid');g.innerHTML='';const s=gameState.inventory.filter(i=>i.type==='dinos'&&!i.isTraining&&!gameState.itemsForSale.some(sale=>sale.dino.birthTime===i.birthTime));if(s.length===0)g.innerHTML=`<p style="grid-column:1/-1;text-align:center;">Nenhum dinossauro disponível.</p>`;s.forEach(d=>{const i=gameState.inventory.indexOf(d);const c=document.createElement('div');c.className='item-card';c.innerHTML=`🦖<br><b>${d.customName}</b>`;c.onclick=()=>listDinoForSale(i);g.appendChild(c);});}
+function listDinoForSale(i){const d=gameState.inventory[i];gameState.itemsForSale.push({dino:d,listTime:Date.now(),comments:[]});gameState.inventory.splice(i,1);showNotification(`${d.customName} foi colocado à venda!`,"success");updateSellUI();}
+function processSales(){if(gameState.itemsForSale.length===0)return;gameState.itemsForSale.forEach((s,i)=>{if(Math.random()<0.05&&s.comments.length<5)s.comments.push(generateSaleComment(s.dino));if(Date.now()-s.listTime>180000){gameState.money+=s.dino.value;showNotification(`${s.dino.customName} foi vendido por $${s.dino.value.toLocaleString()}!`,"success");gameState.itemsForSale.splice(i,1);updateMoneyDisplay();} });if(document.getElementById('sellModal').classList.contains('show')){const cS=document.getElementById('commentSection');cS.innerHTML='';gameState.itemsForSale.forEach(s=>{cS.innerHTML+=`<h4>Comentários para ${s.dino.customName}:</h4>`;s.comments.forEach(c=>{cS.innerHTML+=`<div class="comment">${c}</div>`;});});}}
+function generateSaleComment(d){const c={'size':[`Muito grande!`,`Muito pequeno :(`],'weight':[`Ele é muito gordo.`,`Ele é muito magro.`],'mutations':[`Ué, mas eu gosto de dinossauros com mutações!!!`,`Eca, muito colorido`,`Por que ele é vermelho?`,`Azul? Tipo... um cristal? Nahh.`,`Meu deus, quanta mutação!`]};if(d.mutations.length===0&&Math.random()<0.7)return c.mutations[0];const cat=Object.keys(c)[Math.floor(Math.random()*Object.keys(c).length)];return c[cat][Math.floor(Math.random()*c[cat].length)];}
+function showStats(i){const d=gameState.inventory[i];if(!d)return;selectedItem={type:'dinos',index:i};document.getElementById('statsTitle').textContent=`Stats: ${d.customName}`;document.getElementById('statsContent').innerHTML=`<p><b>Idade:</b> ${Math.floor((Date.now()-d.birthTime)/86400000)} dias</p><p><b>Aparência:</b> ${d.appearance}</p><p><b>Valor:</b> $${d.value.toLocaleString()}</p><p><b>Mutações:</b> ${d.mutations.join(', ')||'Nenhuma'}</p>`;const b=document.getElementById('trainButton');if(d.isTraining){const r=(d.trainingStart+86400000)-Date.now();b.textContent=`Treinando... ${new Date(r).toISOString().substr(11,8)}`;b.disabled=true;}else{b.textContent=`Treinar (24h)`;b.disabled=false;}showModal('statsModal');}
+function trainDino(){if(selectedItem.type!=='dinos'||selectedItem.index===-1)return;const d=gameState.inventory[selectedItem.index];if(d.isTraining)return showNotification("Dinossauro já está treinando!","error");d.isTraining=true;d.trainingStart=Date.now();showNotification(`${d.customName} foi para o treinamento!`,"success");closeModal('statsModal');updateInventoryUI('dinos');}
+function checkForTrainingCompletion(){gameState.inventory.forEach(i=>{if(i.type==='dinos'&&i.isTraining&&(Date.now()-i.trainingStart>86400000)){i.isTraining=false;i.value=Math.floor(i.value*1.2);i.appearance="Treinado";showNotification(`${i.customName} voltou mais forte!`,"success");}});}
+function checkForDeaths(){if(Math.random()<(1e-5/gameState.deathChanceModifier)){const dV=gameState.inventory.filter(i=>i.type==='dinos'&&!i.isTraining);if(dV.length>0){const dD=dV[Math.floor(Math.random()*dV.length)];const i=gameState.inventory.indexOf(dD);const msgs=[`${dD.customName} morreu de intoxicação alimentar! :(`,`${dD.customName} morreu numa briga...`,`${dD.customName} caiu de uma altura muito alta...`];showNotification(msgs[Math.floor(Math.random()*msgs.length)],"death");gameState.inventory.splice(i,1);}}}
+function submitCode(){const i=document.getElementById('codeInput');const c=i.value.trim();i.value='';const n=Date.now(),t=new Date(n).toDateString(),u=gameState.usedCodes[c];if(u){if(u.type==='once')return showNotification("Código já usado.","error");if(u.type==='daily'&&u.date===t)return showNotification("Código de hoje já usado!","error");if(u.type==='timed'&&n<u.expires)return showNotification(`Aguarde ${Math.ceil((u.expires-n)/36e5)}h.`,"error");}let msg='';switch(c){case'BancoADM':showAdminPanel();return;case'MuchMoney':const m=Math.floor(Math.random()*4501)+500;gameState.money+=m;msg=`Você ganhou $${m}!`;gameState.usedCodes[c]={type:'daily',date:t};break;case'JurassicPark':if(Math.random()<.5){gameState.money+=1993;msg=`Você ganhou $1,993!`;}else{gameState.inventory.push({type:'eggs',dinoName:'Tiranossauro Rex',special:'Rexy'});msg=`Ganhou um ovo da Rexy!`;}gameState.usedCodes[c]={type:'once'};break;case'Ladrão Pequeno':const sD=Object.keys(dinosaurs).filter(d=>dinosaurs[d].size==='pequeno');const rD=sD[Math.floor(Math.random()*sD.length)];gameState.inventory.push({type:'eggs',dinoName:rD});msg=`Ganhou um ovo de ${rD}!`;gameState.usedCodes[c]={type:'once'};break;case'StarterPack':gameState.money+=1500;for(let i=0;i<3;i++)gameState.inventory.push({type:'eggs',dinoName:'Compsognato'});gameState.inventory.push({type:'eggs',dinoName:'Pyroraptor'});gameState.activeBoosts.Bloqueador={expires:n+3600000};msg=`Pacote de iniciante recebido!`;gameState.usedCodes[c]={type:'once'};break;case'Veterinário':gameState.deathChanceModifier*=.95;msg=`Expectativa de vida dos dinos aumentada!`;gameState.usedCodes[c]={type:'once'};break;case'Flash':gameState.activeBoosts.Flash={expires:n+86400000};msg=`Velocidade 2x por 24h!`;gameState.usedCodes[c]={type:'timed',expires:n+86400000};break;case'Bigger':gameState.money+=5000000;gameState.inventory.push({type:'dinos',...generateStats('Espinossauro',['ruby'],{customName:'Spike'}),isTraining:false});msg=`Ganhou o Spike Rubi e $5M!`;gameState.usedCodes[c]={type:'once'};break;default:return showNotification("Código inválido!","error");}showNotification(msg,'success');updateMoneyDisplay();closeModal('codesModal');}
+
+// =========================================================================
+// SEÇÃO 6: MECÂNICA DE ROUBO (RESTAURADA)
+// =========================================================================
+function findRobberyTarget() { const targetName = document.getElementById('robberyTargetInput').value.trim(); if (!targetName || targetName === currentUser) return showNotification("Alvo inválido!", "error"); if (gameState.cooldowns.robbery && Date.now() < gameState.cooldowns.robbery) return showNotification(`Aguarde ${Math.ceil((gameState.cooldowns.robbery - Date.now()) / 60000)} min.`, 'error'); const targetData = loadTargetData(targetName); if (!targetData) return showNotification("Jogador não encontrado.", "error"); if (targetData.activeBoosts.Bloqueador && Date.now() < targetData.activeBoosts.Bloqueador.expires) { gameState.cooldowns.robbery = Date.now() + 600000; return showNotification("Alvo protegido! Impossível invadir.", "error"); } showNotification(`Observando ${targetName}...`, "success"); /* Lógica para entrar no modo roubo... */ }
+
+// =========================================================================
+// SEÇÃO 7: NOVAS MECÂNICAS E SISTEMAS ADICIONAIS
+// =========================================================================
+function updateDnaLab(){const c=document.getElementById('dnaLabContainer');if(!c)return;c.innerHTML='<h4>Fragmentos de DNA:</h4>';Object.entries(gameState.dnaFragments).forEach(([d,v])=>{c.innerHTML+=`<div>${d}: ${v}/10 ${v>=10?`<button onclick="craftDino('${d}')">Clonar</button>`:''}</div>`;});}
+function findDnaFragment(){if(Math.random()<1e-4){const d=Object.keys(dinosaurs);const fD=d[Math.floor(Math.random()*d.length)];gameState.dnaFragments[fD]=(gameState.dnaFragments[fD]||0)+1;showNotification(`Encontrou 1 fragmento de DNA de ${fD}!`,"success");updateDnaLab();}}
+function craftDino(d){if(gameState.dnaFragments[d]>=10){gameState.dnaFragments[d]-=10;gameState.inventory.push({type:'eggs',dinoName:d});showNotification(`Clonou um ovo de ${d}!`,"success");updateDnaLab();}}
+function checkDailyReward(){const t=new Date().toDateString();if(gameState.lastDailyReward!==t){document.getElementById('dailyRewardTitle').textContent=`Recompensa Diária! (Dia ${gameState.consecutiveDays+1})`;document.getElementById('dailyRewardText').textContent=`Parabéns por voltar!`;showModal('dailyRewardModal');}}
+function claimDailyReward(){const t=new Date(),y=new Date();y.setDate(t.getDate()-1);if(gameState.lastDailyReward===y.toDateString()){gameState.consecutiveDays++;}else{gameState.consecutiveDays=1;}const rM=500*gameState.consecutiveDays;gameState.money+=rM;gameState.lastDailyReward=t.toDateString();showNotification(`Você coletou $${rM}!`,"success");updateMoneyDisplay();closeModal('dailyRewardModal');}
+function updateStatusEffectsUI(){const c=document.getElementById('statusEffectsContainer');if(!c)return;c.innerHTML='';Object.entries(gameState.activeBoosts).forEach(([eN,e])=>{if(Date.now()<e.expires){const r=e.expires-Date.now(),tS=new Date(r).toISOString().substr(11,8);const i=securityItems[eN]||gadgets[eN]||{};const iE=i.emoji||'⭐';c.innerHTML+=`<div class="status-effect">${iE} ${tS}</div>`;}else{delete gameState.activeBoosts[eN];}});}
+function checkActiveEvents(){/* ESPAÇO PARA EVENTOS FUTUROS */}
+function showNotification(msg,type='success'){const e=document.getElementById('notification');e.textContent=msg;e.className=`notification ${type} show`;setTimeout(()=>e.classList.remove('show'),4000);}
+function showAdminPanel(){closeModal('codesModal');const u=JSON.parse(localStorage.getItem('cad2_users'))||{};let content='<ul>'+Object.keys(u).map(un=>`<li><b>Usuário:</b> ${un} | <b>Código:</b> ${u[un]}</li>`).join('')+'</ul>';document.getElementById('adminContent').innerHTML=content;showModal('adminModal');}
+
+</script>
+</body>
+</html>
+
