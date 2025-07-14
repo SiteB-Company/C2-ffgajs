@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create A Dino 2</title>
+    <title>Create A Dino 2 - O Legado dos Anciões</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&family=Bungee&display=swap');
         :root {--primary-color: #8A2BE2;--secondary-color: #00FFFF;--dark-bg: #12011f;--light-bg: #2a0b4d;--text-color: #f0f0f0;--danger-color: #FF3B30;--success-color: #34C759;}
@@ -52,6 +52,25 @@
         .comment { background: rgba(0,0,0,0.2); border-left: 3px solid var(--secondary-color); padding: 10px; margin-bottom: 5px; border-radius: 0 5px 5px 0; }
         .puzzle-box { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
         .puzzle-color { width: 40px; height: 40px; border-radius: 5px; cursor: pointer; }
+
+        /* Conquista Card Specifics */
+        .achievement-card p {
+            font-size: 0.75rem;
+            margin-top: 5px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .achievement-card.achieved {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 10px var(--secondary-color);
+            filter: saturate(1); /* Deixa a conquista colorida */
+        }
+        .achievement-card.locked {
+            filter: grayscale(1); /* Deixa a conquista escura */
+            opacity: 0.7;
+            border-color: var(--primary-color);
+            cursor: default;
+        }
+
         @media (max-width: 768px) { .cyber-button { padding: 10px 15px; font-size: 0.8rem; margin: 5px; } }
     </style>
 </head>
@@ -79,8 +98,9 @@
             <button class="cyber-button" onclick="showModal('inventoryModal')">Inventário</button>
             <button class="cyber-button" onclick="showModal('shopModal')">Loja</button>
             <button class="cyber-button" onclick="showModal('sellModal')">Vender</button>
-            <button class="cyber-button" style="border-color: var(--danger-color); color: var(--danger-color);" onclick="showModal('robberyModal')">Roubar</button>
+            <button class="cyber-button" style="background-color: black; color: grey; border-color: grey;" disabled>Roubar</button>
             <button class="cyber-button" onclick="showModal('codesModal')">Códigos</button>
+            <button class="cyber-button" onclick="showModal('achievementsModal')">Conquistas</button>
         </div>
     </div>
     
@@ -93,6 +113,14 @@
     <div id="robberyModal" class="modal"><div class="modal-content"><button class="close-btn" onclick="closeModal('robberyModal')">X</button><h2>Atacar Jogador</h2><input type="text" id="robberyTargetInput" placeholder="Nome de usuário do alvo" class="cyber-input" style="width:100%;"><button class="cyber-button" onclick="findRobberyTarget()">Procurar Alvo</button></div></div>
     <div id="adminModal" class="modal"><div class="modal-content"><button class="close-btn" onclick="closeModal('adminModal')">X</button><h2>Painel do Administrador</h2><div id="adminContent" style="color:white; word-break: break-all;"></div></div></div>
     <div id="defensePuzzleModal" class="modal"><div class="modal-content"><h2 id="puzzleTitle">DEFENDA-SE!</h2><p id="puzzleInstructions">Repita a sequência de cores para cancelar o roubo!</p><div id="puzzleSequence" class="puzzle-box"></div><div id="playerInputPuzzle" class="puzzle-box"></div></div></div>
+    <div id="achievementsModal" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('achievementsModal')">X</button>
+            <h2>Conquistas</h2>
+            <div id="achievementsGrid" class="item-grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
+                </div>
+        </div>
+    </div>
     <div id="notification" class="notification"></div>
     
 <script>
@@ -100,24 +128,169 @@
 // SEÇÃO 1: ESTADO GLOBAL E DEFINIÇÕES DE DADOS
 // =========================================================================
 let gameState = {}; let currentUser = null; let gameIntervals = {}; let currentStock = []; let selectedItem = { type: null, index: -1 };
-const defaultGameState = { money: 500, inventory: [], incubators: [null, null, null, null, null, null], itemsForSale: [], dnaFragments: {}, lastStockUpdate: 0, usedCodes: {}, lastDailyReward: null, consecutiveDays: 0, lastExitTime: Date.now(), deathChanceModifier: 1.0, activeBoosts: {}, cooldowns: {}, robberyStatus: {} };
-const dinosaurs = {'Compsognato':{price:300,time:300000,size:1},'Velociraptor':{price:50000,time:3600000,size:2},'Triceratops':{price:76000,time:5400000,size:9},'Tiranossauro Rex':{price:500000,time:13800000,size:12},'Indominus Rex':{price:600000,time:14000000,size:15},'Pyroraptor':{price:52000,time:3900000,size:2.5},'Gallimimus':{price:12000,time:1800000,size:6},'Dilophosaurus':{price:25000,time:2400000,size:1.8},'Ankylosaurus':{price:296285,time:8700000,size:6},'Pteranodon':{price:95000,time:6000000,size:7},'Brachiosaurus':{price:450000,time:11700000,size:22},'Stegosaurus':{price:20000,time:2700000,size:9},'Allosaurus':{price:350000,time:10000000,size:10},'Carnotaurus':{price:288537,time:8100000,size:8},'Giganotosaurus':{price:800000,time:12000000,size:13},'Mosasaurus':{price:900000,time:13000000,size:17},'Therizinosaurus':{price:420000,time:11000000,size:10},'Baryonyx':{price:250000,time:7500000,size:9},'Stygimoloch':{price:45000,time:3000000,size:2},'Parasaurolophus':{price:200000,time:7200000,size:10},'Iguanodon':{price:180000,time:6800000,size:10},'Pachycephalosaurus':{price:325000,time:9900000,size:4.5},'Argentinosaurus':{price:750000,time:15000000,size:30},'Espinossauro':{price:950500,time:13800000,size:15}};
+const dinosaurs = {
+    'Compsognato': {price: 300, time: 300000, size: 1, rarity: 'common'},
+    'Velociraptor': {price: 50000, time: 3600000, size: 2, rarity: 'uncommon'},
+    'Triceratops': {price: 76000, time: 5400000, size: 9, rarity: 'uncommon'},
+    'Tiranossauro Rex': {price: 500000, time: 13800000, size: 12, rarity: 'rare'},
+    'Indominus Rex': {price: 600000, time: 14000000, size: 15, rarity: 'rare'},
+    'Pyroraptor': {price: 52000, time: 3900000, size: 2.5, rarity: 'uncommon'},
+    'Gallimimus': {price: 12000, time: 1800000, size: 6, rarity: 'uncommon'},
+    'Dilophosaurus': {price: 25000, time: 2400000, size: 1.8, rarity: 'common'},
+    'Ankylosaurus': {price: 296285, time: 8700000, size: 6, rarity: 'uncommon'},
+    'Pteranodon': {price: 95000, time: 6000000, size: 7, rarity: 'uncommon'},
+    'Brachiosaurus': {price: 450000, time: 11700000, size: 22, rarity: 'rare'},
+    'Stegosaurus': {price: 20000, time: 2700000, size: 9, rarity: 'uncommon'},
+    'Allosaurus': {price: 350000, time: 10000000, size: 10, rarity: 'rare'},
+    'Carnotaurus': {price: 288537, time: 8100000, size: 8, rarity: 'uncommon'},
+    'Giganotosaurus': {price: 800000, time: 12000000, size: 13, rarity: 'rare'},
+    'Mosasaurus': {price: 900000, time: 13000000, size: 17, rarity: 'rare'},
+    'Therizinosaurus': {price: 420000, time: 11000000, size: 10, rarity: 'rare'},
+    'Baryonyx': {price: 250000, time: 7500000, size: 9, rarity: 'uncommon'},
+    'Stygimoloch': {price: 45000, time: 3000000, size: 2, rarity: 'common'},
+    'Parasaurolophus': {price: 200000, time: 7200000, size: 10, rarity: 'uncommon'},
+    'Iguanodon': {price: 180000, time: 6800000, size: 10, rarity: 'uncommon'},
+    'Pachycephalosaurus': {price: 325000, time: 9900000, size: 4.5, rarity: 'uncommon'},
+    'Argentinosaurus': {price: 750000, time: 15000000, size: 30, rarity: 'rare'},
+    'Espinossauro': {price: 950500, time: 13800000, size: 15, rarity: 'rare'},
+    'Archaeornithomimus': {price: 15000, time: 1500000, size: 1.5, rarity: 'common'},
+    'Compsosuchus': {price: 40000, time: 2000000, size: 2.2, rarity: 'common'},
+    'Deinocheirus': {price: 400000, time: 10000000, size: 11, rarity: 'rare'},
+    'Dreadnoughtus': {price: 950000, time: 16000000, size: 35, rarity: 'rare'},
+    'Edmontosaurus': {price: 100000, time: 4800000, size: 8, rarity: 'uncommon'},
+    'Herrerasaurus': {price: 30000, time: 2100000, size: 3, rarity: 'common'},
+    'Maiasaura': {price: 130000, time: 5000000, size: 9, rarity: 'uncommon'},
+    'Metriacanthosaurus': {price: 380000, time: 10500000, size: 7, rarity: 'rare'},
+    'Monolophosaurus': {price: 200000, time: 6000000, size: 5, rarity: 'uncommon'},
+    'Ouranosaurus': {price: 150000, time: 6500000, size: 7.5, rarity: 'uncommon'},
+    'Proceratosaurus': {price: 28000, time: 1700000, size: 1.9, rarity: 'common'},
+    'Suchomimus': {price: 400000, time: 11000000, size: 11, rarity: 'rare'}
+};
 const securityItems = {'Bloqueador':{price:3000,description:'Bloqueia invasões por 1 hora.',duration:3600000,cooldown:3600000,emoji:'🛡️'},'Demora':{price:5000,description:'Aumenta tempo de roubo. Dura 1h.',duration:3600000,cooldown:7200000,emoji:'⏳'},'Falso':{price:15000,description:'O ladrão rouba uma isca. Dura 5h.',duration:18000000,cooldown:86400000,emoji:'🎭'},'Torreta Sentinela':{price:25000,description:'30% de chance de cancelar um roubo. Uso único.',emoji:'💥'}};
 const gadgets = {'Scanner de DNA':{price:2500,description:'Revela 1 fragmento de DNA aleatório.'},'Time Skip':{price:5000,description:'Avança o tempo em 1 hora.',cooldown:86400000},'Crescedor':{price:10000,description:'Choca um ovo instantaneamente.',cooldown:172800000},'Mutador':{price:20000,description:'Aumenta chance de mutações por 50 min.',duration:3000000,cooldown:259200000}};
+
+const achievements = {
+    'First Hatch': { name: 'Primeiro Choque', description: 'Choque seu primeiro dinossauro.', rarity: 'Comum', percent: '95.2%', check: () => gameState.inventory.some(d => d.type === 'dinos'), achieved: false },
+    'Millionaire': { name: 'Milionário', description: 'Acumule $1,000,000.', rarity: 'Incomum', percent: '45.8%', check: () => gameState.money >= 1000000, achieved: false },
+    'Dino Collector': { name: 'Colecionador de Dinos', description: 'Tenha 10 dinossauros diferentes em seu inventário.', rarity: 'Raro', percent: '15.1%', check: () => new Set(gameState.inventory.filter(d => d.type === 'dinos').map(d => d.name)).size >= 10, achieved: false },
+    'Master Trainer': { name: 'Mestre Treinador', description: 'Treine 5 dinossauros.', rarity: 'Incomum', percent: '30.7%', check: () => gameState.inventory.filter(d => d.type === 'dinos' && d.appearance === 'Treinado').length >= 5, achieved: false },
+    'Genetic Engineer': { name: 'Engenheiro Genético', description: 'Crie um dinossauro com 3 ou mais mutações.', rarity: 'Lendário', percent: '2.5%', check: () => gameState.inventory.some(d => d.type === 'dinos' && d.mutations.length >= 3), achieved: false },
+    'Compsognathus Army': { name: 'Exército de Compsognatos', description: 'Tenha 20 Compsognatos.', rarity: 'Raro', percent: '10.3%', check: () => gameState.inventory.filter(d => d.type === 'dinos' && d.name === 'Compsognato').length >= 20, achieved: false },
+    'Big Spender': { name: 'Gastador Nato', description: 'Gaste um total de $5,000,000.', rarity: 'Muito Raro', percent: '7.1%', check: () => gameState.totalMoneySpent >= 5000000, achieved: false },
+    'Lucky Find': { name: 'Achado Sortudo', description: 'Encontre 50 fragmentos de DNA.', rarity: 'Incomum', percent: '22.9%', check: () => Object.values(gameState.dnaFragments).reduce((a, b) => a + b, 0) >= 50, achieved: false },
+    'Incubator Master': { name: 'Mestre da Incubadora', description: 'Choque 15 dinossauros.', rarity: 'Incomum', percent: '35.5%', check: () => gameState.totalDinosHatched >= 15, achieved: false },
+    'Market Mogul': { name: 'Magnata do Mercado', description: 'Venda dinossauros no valor total de $1,000,000.', rarity: 'Raro', percent: '18.0%', check: () => gameState.totalSalesValue >= 1000000, achieved: false },
+    'Gadget Enthusiast': { name: 'Entusiasta de Gadgets', description: 'Use um Time Skip, Crescedor e Mutador.', rarity: 'Incomum', percent: '28.4%', check: () => gameState.usedGadgets?.includes('Time Skip') && gameState.usedGadgets?.includes('Crescedor') && gameState.usedGadgets?.includes('Mutador'), achieved: false },
+    'Cyberpunk Dino': { name: 'Dino Cyberpunk', description: 'Desbloqueie todos os gadgets e itens de segurança.', rarity: 'Muito Raro', percent: '5.6%', check: () => {
+        const allGadgets = Object.keys(gadgets);
+        const allSecurity = Object.keys(securityItems);
+        return allGadgets.every(g => gameState.usedGadgets?.includes(g)) && allSecurity.every(s => gameState.activeBoosts[s] || gameState.cooldowns[s] || gameState.inventory.some(item => item.name === s));
+    }, achieved: false },
+    'Legendary Ruby Spino': { name: 'Espinossauro Rubi Lendário', description: 'A regra tá clara, e uma recompensa extra será dada pra quem pegar', rarity: 'Mítica', percent: '0.01%', check: () => gameState.inventory.some(d => d.type === 'dinos' && d.name === 'Espinossauro' && d.mutations.includes('ruby')), achieved: false },
+    'Code Breaker': { name: 'Quebrador de Códigos', description: 'Use 5 códigos diferentes.', rarity: 'Incomum', percent: '40.0%', check: () => Object.keys(gameState.usedCodes).length >= 5, achieved: false },
+    'First Blood': { name: 'Primeira Queda', description: 'Seu primeiro dinossauro morreu.', rarity: 'Comum', percent: '70.5%', check: () => gameState.totalDeaths > 0, achieved: false }
+};
+
+
+const defaultGameState = { 
+    money: 500, 
+    inventory: [], 
+    incubators: [null, null, null, null, null, null], 
+    itemsForSale: [], 
+    dnaFragments: {}, 
+    lastStockUpdate: 0, 
+    usedCodes: {}, 
+    lastDailyReward: null, 
+    consecutiveDays: 0, 
+    lastExitTime: Date.now(), 
+    deathChanceModifier: 1.0, 
+    activeBoosts: {}, 
+    cooldowns: {}, 
+    robberyStatus: {},
+    accountCreationDate: Date.now(),
+    lastMonthlyBonusMonth: -1,
+    achievements: {},
+    totalMoneySpent: 0,
+    totalDinosHatched: 0,
+    totalSalesValue: 0,
+    totalDeaths: 0,
+    usedGadgets: []
+};
 
 // =========================================================================
 // SEÇÃO 2: INICIALIZAÇÃO, LOGIN E LOOP PRINCIPAL
 // =========================================================================
 window.addEventListener('load', () => { document.getElementById('loginScreen').style.display = 'flex'; });
-function handleLogin() { const u = document.getElementById('usernameInput').value.trim(), p = document.getElementById('accessCodeInput').value.trim(); if (!u || !p) return showNotification("Preencha todos os campos!", "error"); let s = JSON.parse(localStorage.getItem('cad2_users')) || {}; s[u] ? (s[u] !== p ? showNotification("Código incorreto!", "error") : (currentUser = u, initGameForUser())) : (s[u] = p, localStorage.setItem('cad2_users', JSON.stringify(s)), currentUser = u, gameState = { ...defaultGameState, username: u }, saveGameData(), showNotification(`Conta '${u}' criada!`, 'success'), initGameForUser()); }
-function initGameForUser() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('gameInterface').style.display = 'block'; loadGameData(); updateStockIfNeeded(); Object.values(gameIntervals).forEach(clearInterval); gameIntervals.main = setInterval(gameTick, 1000); gameIntervals.save = setInterval(saveGameData, 5000); window.addEventListener('beforeunload', saveGameData); checkDailyReward(); checkForIncomingRobbery(); }
-function gameTick() { updateIncubators(); processSales(); checkForTrainingCompletion(); checkForDeaths(); findDnaFragment(); updateStatusEffectsUI(); checkActiveEvents(); updateShopTimer(); }
+function handleLogin() { 
+    const u = document.getElementById('usernameInput').value.trim();
+    const p = document.getElementById('accessCodeInput').value.trim();
+    if (!u || !p) return showNotification("Preencha todos os campos!", "error"); 
+    let s = JSON.parse(localStorage.getItem('cad2_users')) || {}; 
+    if (s[u]) {
+        if (s[u] !== p) {
+            showNotification("Código incorreto!", "error");
+        } else {
+            currentUser = u;
+            initGameForUser();
+        }
+    } else {
+        s[u] = p;
+        localStorage.setItem('cad2_users', JSON.stringify(s));
+        currentUser = u;
+        gameState = { ...defaultGameState, username: u, accountCreationDate: Date.now() }; // Set creation date for new users
+        saveGameData();
+        showNotification(`Conta '${u}' criada!`, 'success');
+        initGameForUser();
+    }
+}
+function initGameForUser() { 
+    document.getElementById('loginScreen').style.display = 'none'; 
+    document.getElementById('gameInterface').style.display = 'block'; 
+    loadGameData(); 
+    updateStockIfNeeded(); 
+    Object.values(gameIntervals).forEach(clearInterval); 
+    gameIntervals.main = setInterval(gameTick, 1000); 
+    gameIntervals.save = setInterval(saveGameData, 5000); 
+    window.addEventListener('beforeunload', saveGameData); 
+    checkDailyReward(); 
+    checkForIncomingRobbery();
+    checkAchievements(); // Initial check for achievements on game load
+}
+function gameTick() { 
+    updateIncubators(); 
+    processSales(); 
+    checkForTrainingCompletion(); 
+    checkForDeaths(); 
+    findDnaFragment(); 
+    updateStatusEffectsUI(); 
+    checkActiveEvents(); 
+    updateShopTimer(); 
+    checkAchievements(); // Check achievements every tick
+}
 
 // =========================================================================
 // SEÇÃO 3: PERSISTÊNCIA DE DADOS (SAVE/LOAD)
 // =========================================================================
-function saveGameData() { if (!currentUser) return; gameState.lastExitTime = Date.now(); localStorage.setItem(`cad2_save_${currentUser}`, JSON.stringify(gameState)); }
-function loadGameData() { if (!currentUser) return; const s = localStorage.getItem(`cad2_save_${currentUser}`); if (s) { const d = JSON.parse(s); gameState = { ...defaultGameState, ...d }; const o = Date.now() - gameState.lastExitTime; (gameState.incubators || []).forEach(e => { if (e) e.startTime -= o }); (gameState.inventory || []).forEach(i => { if (i.isTraining) i.trainingStart -= o }); (gameState.itemsForSale || []).forEach(i => { if (i.listTime) i.listTime -= o }); } else { gameState = { ...defaultGameState, username: currentUser }; } updateAllUI(); }
+function saveGameData() { 
+    if (!currentUser) return; 
+    gameState.lastExitTime = Date.now(); 
+    localStorage.setItem(`cad2_save_${currentUser}`, JSON.stringify(gameState)); 
+}
+function loadGameData() { 
+    if (!currentUser) return; 
+    const s = localStorage.getItem(`cad2_save_${currentUser}`); 
+    if (s) { 
+        const d = JSON.parse(s); 
+        gameState = { ...defaultGameState, ...d }; 
+        const o = Date.now() - gameState.lastExitTime; 
+        (gameState.incubators || []).forEach(e => { if (e) e.startTime -= o }); 
+        (gameState.inventory || []).forEach(i => { if (i.isTraining) i.trainingStart -= o }); 
+        (gameState.itemsForSale || []).forEach(i => { if (i.listTime) i.listTime -= o }); 
+    } else { 
+        gameState = { ...defaultGameState, username: currentUser }; 
+    } 
+    updateAllUI(); 
+}
 
 // =========================================================================
 // SEÇÃO 4: FUNÇÕES DE GERAÇÃO DE ATRIBUTOS
@@ -135,7 +308,16 @@ function calculateHatchTime(n,m){let t=dinosaurs[n].time;if(gameState.activeBoos
 // =========================================================================
 function updateAllUI(){updateMoneyDisplay();updateIncubators();updateDnaLab();updateStatusEffectsUI();}
 function toggleView(viewId){document.querySelectorAll('.main-view').forEach(v=>v.style.display='none');document.getElementById(viewId).style.display='block';}
-function showModal(id){const m=document.getElementById(id);if(m){if(id==='inventoryModal')updateInventoryUI();if(id==='shopModal')updateShopUI();if(id==='sellModal')updateSellUI();m.classList.add('show');}}
+function showModal(id){
+    const m=document.getElementById(id);
+    if(m){
+        if(id==='inventoryModal')updateInventoryUI();
+        if(id==='shopModal')updateShopUI();
+        if(id==='sellModal')updateSellUI();
+        if(id==='achievementsModal')updateAchievementsUI(); // Adicionado para a nova modal de conquistas
+        m.classList.add('show');
+    }
+}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 function updateMoneyDisplay(){document.getElementById('money').textContent=Math.floor(gameState.money).toLocaleString();}
 function updateInventoryUI(t='eggs',b){document.querySelectorAll('#inventoryModal .tab-button').forEach(btn=>btn.classList.remove('active'));const target=b||document.querySelector(`#inventoryModal .tab-button[onclick*="'${t}'"]`);target.classList.add('active');const g=document.getElementById('inventoryGrid');g.innerHTML='';const items=gameState.inventory.filter(i=>i.type===t);if(items.length===0){g.innerHTML=`<p style="grid-column:1/-1;text-align:center;">Nenhum item aqui.</p>`;return;}items.forEach(item=>{const i=gameState.inventory.indexOf(item);const c=document.createElement('div');c.className='item-card';c.dataset.index=i;if(item.isTraining)c.dataset.training="true";c.innerHTML=(item.type==='eggs')?`🥚<br><b>Ovo de ${item.dinoName}</b>`:`${item.mutations.includes('ruby')?'💎':'🦖'}<br><b>${item.customName}</b>`;c.onclick=()=>selectItem(item.type,i,c);g.appendChild(c);});}
@@ -143,48 +325,376 @@ function switchInventoryTab(t,b){updateInventoryUI(t,b);}
 function selectItem(t,i,c){selectedItem={type:t,index:i};document.querySelectorAll('#inventoryGrid .item-card').forEach(card=>card.classList.remove('selected'));c.classList.add('selected');if(t==='dinos')showStats(i);else if(gameState.activeBoosts.Crescedor){buyItem('gadgets','Crescedor');}}
 function updateIncubators(data=gameState.incubators){const c=document.getElementById('incubatorsContainer');if(!c)return;c.innerHTML='';for(let i=0;i<6;i++){const d=document.createElement('div');d.className='incubator';const e=data[i];if(e){d.classList.add('occupied');const r=Math.max(0,(e.startTime+e.hatchTime)-Date.now());if(r<=0&&data===gameState.incubators){hatchDinosaur(i);continue;}d.innerHTML=`<div class="egg-view">🥚</div><div class="egg-info"><b>${e.dinoName}</b><br>${new Date(r).toISOString().substr(11,8)}</div>`;}else{d.innerHTML=`<span>Vazio</span>`;if(data===gameState.incubators)d.onclick=()=>placeEggInIncubator(i);}c.appendChild(d);}}
 function placeEggInIncubator(idx){if(selectedItem.type!=='eggs'||selectedItem.index===-1)return showNotification("Selecione um ovo do inventário!","error");const eD=gameState.inventory[selectedItem.index];const b=gameState.activeBoosts.Mutador&&Date.now()<gameState.activeBoosts.Mutador.expires;const m=['golden','diamond','ruby','colorful'].filter(mu=>Math.random()<(b?0.6:0.1));gameState.incubators[idx]={dinoName:eD.dinoName,mutations:m,startTime:Date.now(),hatchTime:calculateHatchTime(eD.dinoName,m)};gameState.inventory.splice(selectedItem.index,1);selectedItem={type:null,index:-1};updateInventoryUI('eggs');updateIncubators();}
-function hatchDinosaur(i){const e=gameState.incubators[i];if(!e)return;const nD={type:'dinos',...generateStats(e.dinoName,e.mutations),isTraining:false};gameState.inventory.push(nD);gameState.incubators[i]=null;showNotification(`${e.dinoName} nasceu! 🦖`,"success");updateIncubators();}
+function hatchDinosaur(i){
+    const e=gameState.incubators[i];
+    if(!e)return;
+    const nD={type:'dinos',...generateStats(e.dinoName,e.mutations),isTraining:false};
+    gameState.inventory.push(nD);
+    gameState.incubators[i]=null;
+    gameState.totalDinosHatched = (gameState.totalDinosHatched || 0) + 1; // Para conquista
+    showNotification(`${e.dinoName} nasceu! 🦖`,"success");
+    updateIncubators();
+    checkAchievements();
+}
 function updateStockIfNeeded(){if(Date.now()-gameState.lastStockUpdate>=600000){generateStock();gameState.lastStockUpdate=Date.now();showNotification("A loja foi reabastecida!",'success');}}
 function generateStock(){const d=Object.keys(dinosaurs);currentStock=d.sort(()=>.5-Math.random()).slice(0,Math.floor(Math.random()*10)+15);const hasStarterCode=gameState.usedCodes.StarterPack;if(!hasStarterCode&&!currentStock.includes('Compsognato')){currentStock.pop();currentStock.unshift('Compsognato');}}
 function updateShopUI(t='dinos',b){document.querySelectorAll('#shopModal .tab-button').forEach(btn=>btn.classList.remove('active'));const target=b||document.querySelector(`#shopModal .tab-button[onclick*="'${t}'"]`);target.classList.add('active');const g=document.getElementById('shopGrid');g.innerHTML='';let src={};if(t==='dinos')src=dinosaurs;else if(t==='gadgets')src=gadgets;else if(t==='security')src=securityItems;Object.keys(src).forEach(k=>{const item=src[k];const c=document.createElement('div');c.className='item-card';let content=`<b>${k}</b><br>$${item.price.toLocaleString()}`;const inStock=t==='dinos'?currentStock.includes(k):true;if(item.description)content+=`<br><small>${item.description}</small>`;if(!inStock){c.style.opacity='0.5';c.innerHTML+=` <small>(Esgotado)</small>`;}c.innerHTML=content;c.onclick=()=>buyItem(t,k);g.appendChild(c);});}
 function switchShopTab(t,b){updateShopUI(t,b);}
-function buyItem(t,k){const iD=(t==='dinos')?dinosaurs[k]:(t==='gadgets')?gadgets[k]:securityItems[k];if(t==='dinos'&&!currentStock.includes(k))return showNotification("Fora de estoque!","error");if(gameState.money<iD.price)return showNotification("Dinheiro insuficiente!","error");if(t==='security'&&iD.dinoCost){const dC=gameState.inventory.filter(d=>d.name===iD.dinoCost.name).length;if(dC<iD.dinoCost.count)return showNotification(`Você precisa de ${iD.dinoCost.count} ${iD.dinoCost.name}(s)!`,'error');for(let i=0;i<iD.dinoCost.count;i++)gameState.inventory.splice(gameState.inventory.findIndex(d=>d.name===iD.dinoCost.name),1);}gameState.money-=iD.price;if(t==='dinos'){gameState.inventory.push({type:'eggs',dinoName:k});showNotification(`Ovo de ${k} comprado!`,"success");}else if(t==='security'){if(iD.duration)gameState.activeBoosts[k]={expires:Date.now()+iD.duration};if(iD.cooldown)gameState.cooldowns[k]=Date.now()+(iD.duration||0)+iD.cooldown;showNotification(`${k} ativado!`,"success");}else if(t==='gadgets'){if(gameState.cooldowns[k]&&Date.now()<gameState.cooldowns[k])return showNotification("Gadget em cooldown!","error");switch(k){case'Scanner de DNA':findDnaFragment(true);break;case'Time Skip':advanceTime(3600000);showNotification("Tempo avançado em 1 hora!","success");break;case'Crescedor':if(selectedItem.type!=='eggs'||selectedItem.index===-1)return showNotification("Compre e selecione um ovo no inventário para usar!","error");hatchDinosaur(gameState.inventory.indexOf(selectedItem.item));break;case'Mutador':gameState.activeBoosts.Mutador={expires:Date.now()+iD.duration};showNotification("Chance de mutação aumentada!","success");break;}if(iD.cooldown)gameState.cooldowns[k]=Date.now()+iD.cooldown;}updateMoneyDisplay();}
+function buyItem(t,k){
+    const iD=(t==='dinos')?dinosaurs[k]:(t==='gadgets')?gadgets[k]:securityItems[k];
+    if(t==='dinos'&&!currentStock.includes(k))return showNotification("Fora de estoque!","error");
+    if(gameState.money<iD.price)return showNotification("Dinheiro insuficiente!","error");
+    
+    if (t !== 'security') { // Security items are "activated" not necessarily "owned" for totalMoneySpent
+        gameState.totalMoneySpent = (gameState.totalMoneySpent || 0) + iD.price; // Para conquista
+    }
+
+    if(t==='security'&&iD.dinoCost){const dC=gameState.inventory.filter(d=>d.name===iD.dinoCost.name).length;if(dC<iD.dinoCost.count)return showNotification(`Você precisa de ${iD.dinoCost.count} ${iD.dinoCost.name}(s)!`,'error');for(let i=0;i<iD.dinoCost.count;i++)gameState.inventory.splice(gameState.inventory.findIndex(d=>d.name===iD.dinoCost.name),1);}
+    
+    gameState.money-=iD.price;
+    if(t==='dinos'){
+        gameState.inventory.push({type:'eggs',dinoName:k});
+        showNotification(`Ovo de ${k} comprado!`,"success");
+    }else if(t==='security'){
+        if(iD.duration)gameState.activeBoosts[k]={expires:Date.now()+iD.duration};
+        if(iD.cooldown)gameState.cooldowns[k]=Date.now()+(iD.duration||0)+iD.cooldown;
+        showNotification(`${k} ativado!`,"success");
+    }else if(t==='gadgets'){
+        if(gameState.cooldowns[k]&&Date.now()<gameState.cooldowns[k])return showNotification("Gadget em cooldown!","error");
+        switch(k){
+            case'Scanner de DNA':findDnaFragment(true);break;
+            case'Time Skip':advanceTime(3600000);showNotification("Tempo avançado em 1 hora!","success");break;
+            case'Crescedor':
+                if(selectedItem.type!=='eggs'||selectedItem.index===-1)return showNotification("Compre e selecione um ovo no inventário para usar!","error");
+                // Find the actual egg object from inventory using selectedItem.index
+                const eggToHatch = gameState.inventory[selectedItem.index];
+                if (!eggToHatch || eggToHatch.type !== 'eggs') {
+                    return showNotification("Selecione um ovo válido para chocar!", "error");
+                }
+                // Simulate hatching by directly adding the dino and removing the egg
+                const dinoName = eggToHatch.dinoName;
+                const mutations = eggToHatch.mutations || []; // Ensure mutations are passed
+                const newDino = {type:'dinos', ...generateStats(dinoName, mutations), isTraining:false};
+                gameState.inventory.splice(selectedItem.index, 1); // Remove egg
+                gameState.inventory.push(newDino); // Add dino
+                gameState.totalDinosHatched = (gameState.totalDinosHatched || 0) + 1; // Para conquista
+                showNotification(`${dinoName} foi chocado instantaneamente! 🦖`, "success");
+                selectedItem = {type:null, index:-1}; // Reset selected item
+                updateInventoryUI('eggs'); // Refresh inventory view
+                break;
+            case'Mutador':gameState.activeBoosts.Mutador={expires:Date.now()+iD.duration};showNotification("Chance de mutação aumentada!","success");break;
+        }
+        if(iD.cooldown)gameState.cooldowns[k]=Date.n
+        if (!gameState.usedGadgets.includes(k)) { // Track used gadgets for achievement
+            gameState.usedGadgets.push(k);
+        }
+    }
+    updateMoneyDisplay();
+    checkAchievements(); // Check achievements after buying items
+}
 function advanceTime(ms){(gameState.incubators||[]).forEach(e=>{if(e)e.startTime-=ms});(gameState.inventory||[]).forEach(i=>{if(i.isTraining)i.trainingStart-=ms});Object.keys(gameState.cooldowns).forEach(k=>{gameState.cooldowns[k]-=ms});}
 function updateShopTimer(){const t=document.getElementById('shopTimer');if(!t)return;const r=600000-(Date.now()-gameState.lastStockUpdate);if(r>0)t.innerHTML=`Próximo estoque em: ${new Date(r).toISOString().substr(14,5)}`;else t.innerHTML=`Reabastecendo...`;}
 function updateSellUI(){const g=document.getElementById('sellGrid');g.innerHTML='';const s=gameState.inventory.filter(i=>i.type==='dinos'&&!i.isTraining&&!gameState.itemsForSale.some(sale=>sale.dino.birthTime===i.birthTime));if(s.length===0)g.innerHTML=`<p style="grid-column:1/-1;text-align:center;">Nenhum dinossauro disponível.</p>`;s.forEach(d=>{const i=gameState.inventory.indexOf(d);const c=document.createElement('div');c.className='item-card';c.innerHTML=`🦖<br><b>${d.customName}</b>`;c.onclick=()=>listDinoForSale(i);g.appendChild(c);});}
 function listDinoForSale(i){const d=gameState.inventory[i];gameState.itemsForSale.push({dino:d,listTime:Date.now(),comments:[]});gameState.inventory.splice(i,1);showNotification(`${d.customName} foi colocado à venda!`,"success");updateSellUI();}
-function processSales(){if(gameState.itemsForSale.length===0)return;gameState.itemsForSale.forEach((s,i)=>{if(Math.random()<0.1&&s.comments.length<5)s.comments.push(generateSaleComment(s.dino));if(Date.now()-s.listTime>180000){gameState.money+=s.dino.value;showNotification(`${s.dino.customName} foi vendido por $${s.dino.value.toLocaleString()}!`,"success");gameState.itemsForSale.splice(i,1);updateMoneyDisplay();} });if(document.getElementById('sellModal').classList.contains('show')){const cS=document.getElementById('commentSection');cS.innerHTML='';gameState.itemsForSale.forEach(s=>{cS.innerHTML+=`<h4>Comentários para ${s.dino.customName}:</h4>`;s.comments.forEach(c=>{cS.innerHTML+=`<div class="comment">${c}</div>`;});});}}
+function processSales(){
+    if(gameState.itemsForSale.length===0)return;
+    gameState.itemsForSale.forEach((s,i)=>{
+        if(Math.random()<0.1&&s.comments.length<5)s.comments.push(generateSaleComment(s.dino));
+        if(Date.now()-s.listTime>180000){
+            gameState.money+=s.dino.value;
+            gameState.totalSalesValue = (gameState.totalSalesValue || 0) + s.dino.value; // Para conquista
+            showNotification(`${s.dino.customName} foi vendido por $${s.dino.value.toLocaleString()}!`,"success");
+            gameState.itemsForSale.splice(i,1);
+            updateMoneyDisplay();
+            checkAchievements(); // Check achievements after sales
+        } 
+    });
+    if(document.getElementById('sellModal').classList.contains('show')){const cS=document.getElementById('commentSection');cS.innerHTML='';gameState.itemsForSale.forEach(s=>{cS.innerHTML+=`<h4>Comentários para ${s.dino.customName}:</h4>`;s.comments.forEach(c=>{cS.innerHTML+=`<div class="comment">${c}</div>`;});});}
+}
 function generateSaleComment(dino){const comments=[];if(dino.size>15)comments.push("Ele é gigantesco! Impressionante.");else if(dino.size<2)comments.push("Hmm, achei meio pequeno.");if(dino.mutations.length===0&&Math.random()<0.5)comments.push("Poxa, nenhum traço diferente? Gosto de exclusividade.");else{if(dino.mutations.includes('ruby'))comments.push("Essa coloração vermelha é... intensa.");if(dino.mutations.includes('diamond'))comments.push("Azul? Tipo... um cristal? Interessante.");if(dino.mutations.includes('colorful'))comments.push("Eca, muito colorido para o meu gosto.");if(dino.mutations.length>2)comments.push("Meu deus, quanta mutação! É um carnaval?");}if(comments.length===0)return"Parece um espécime padrão. Vou pensar.";return comments[Math.floor(Math.random()*comments.length)];}
 function showStats(i){const d=gameState.inventory[i];if(!d)return;selectedItem={type:'dinos',index:i};document.getElementById('statsTitle').textContent=`Stats: ${d.customName}`;document.getElementById('statsContent').innerHTML=`<p><b>Idade:</b> ${Math.floor((Date.now()-d.birthTime)/86400000)} dias</p><p><b>Aparência:</b> ${d.appearance}</p><p><b>Valor:</b> $${d.value.toLocaleString()}</p><p><b>Mutações:</b> ${d.mutations.join(', ')||'Nenhuma'}</p>`;const b=document.getElementById('trainButton');if(d.isTraining){const r=(d.trainingStart+86400000)-Date.now();b.textContent=`Treinando... ${new Date(r).toISOString().substr(11,8)}`;b.disabled=true;}else{b.textContent=`Treinar (24h)`;b.disabled=false;}showModal('statsModal');}
-function trainDino(){if(selectedItem.type!=='dinos'||selectedItem.index===-1)return;const d=gameState.inventory[selectedItem.index];if(d.isTraining)return showNotification("Dinossauro já está treinando!","error");d.isTraining=true;d.trainingStart=Date.now();showNotification(`${d.customName} foi para o treinamento!`,"success");closeModal('statsModal');updateInventoryUI('dinos');}
-function checkForTrainingCompletion(){gameState.inventory.forEach(i=>{if(i.type==='dinos'&&i.isTraining&&(Date.now()-i.trainingStart>86400000)){i.isTraining=false;i.value=Math.floor(i.value*1.2);i.appearance="Treinado";showNotification(`${i.customName} voltou mais forte!`,"success");}});}
-function checkForDeaths(){if(Math.random()<(1e-5/gameState.deathChanceModifier)){const dV=gameState.inventory.filter(i=>i.type==='dinos'&&!i.isTraining);if(dV.length>0){const dD=dV[Math.floor(Math.random()*dV.length)];const i=gameState.inventory.indexOf(dD);const msgs=[`${dD.customName} morreu de intoxicação alimentar! :(`,`${dD.customName} morreu numa briga...`,`${dD.customName} caiu de uma altura muito alta...`];showNotification(msgs[Math.floor(Math.random()*msgs.length)],"death");gameState.inventory.splice(i,1);}}}
-function submitCode(){const i=document.getElementById('codeInput');const c=i.value.trim().toLowerCase();i.value='';const n=Date.now(),t=new Date(n).toDateString(),u=gameState.usedCodes[c];if(u){if(u.type==='once')return showNotification("Código já usado.","error");if(u.type==='daily'&&u.date===t)return showNotification("Código de hoje já usado!","error");if(u.type==='timed'&&n<u.expires)return showNotification(`Aguarde ${Math.ceil((u.expires-n)/36e5)}h.`,"error");}let msg='';switch(c){case'bancoadm':showAdminPanel();return;case'muchmoney':const m=Math.floor(Math.random()*4501)+500;gameState.money+=m;msg=`Você ganhou $${m}!`;gameState.usedCodes[c]={type:'daily',date:t};break;case'fragmentation':const dN=Object.keys(dinosaurs);const rD=dN[Math.floor(Math.random()*dN.length)];gameState.dnaFragments[rD]=(gameState.dnaFragments[rD]||0)+10;msg=`Ganhou 10 fragmentos de DNA de ${rD}!`;gameState.usedCodes[c]={type:'timed',expires:n+432000000};break;case'jurassicpark':if(Math.random()<.5){gameState.money+=1993;msg=`Ganhou $1,993!`;}else{gameState.inventory.push({type:'eggs',dinoName:'Tiranossauro Rex',special:'Rexy'});msg=`Ganhou um ovo da Rexy!`;}gameState.usedCodes[c]={type:'once'};break;case'ladrão pequeno':const sD=Object.keys(dinosaurs).filter(d=>dinosaurs[d].size<3);const ranD=sD[Math.floor(Math.random()*sD.length)];gameState.inventory.push({type:'eggs',dinoName:ranD});msg=`Ganhou um ovo de ${ranD}!`;gameState.usedCodes[c]={type:'once'};break;case'starterpack':gameState.money+=1500;for(let i=0;i<3;i++)gameState.inventory.push({type:'eggs',dinoName:'Compsognato'});gameState.inventory.push({type:'eggs',dinoName:'Pyroraptor'});gameState.activeBoosts.Bloqueador={expires:n+3600000};msg=`Pacote de iniciante recebido!`;gameState.usedCodes[c]={type:'once'};break;case'veterinário':gameState.deathChanceModifier*=.95;msg=`Expectativa de vida dos dinos aumentada!`;gameState.usedCodes[c]={type:'once'};break;case'flash':gameState.activeBoosts.Flash={expires:n+86400000};msg=`Velocidade 2x por 24h!`;gameState.usedCodes[c]={type:'timed',expires:n+86400000};break;case'bigger':gameState.money+=5000000;gameState.inventory.push({type:'dinos',...generateStats('Espinossauro',['ruby'],{customName:'Spike'}),isTraining:false});msg=`Ganhou o Spike Rubi e $5M!`;gameState.usedCodes[c]={type:'once'};break;default:return showNotification("Código inválido!","error");}showNotification(msg,'success');updateMoneyDisplay();closeModal('codesModal');}
+function trainDino(){if(selectedItem.type!=='dinos'||selectedItem.index===-1)return;const d=gameState.inventory[selectedItem.index];if(d.isTraining)return showNotification("Dinossauro já está treinando!","error");d.isTraining=true;d.trainingStart=Date.now();showNotification(`${d.customName} foi para o treinamento!`,"success");closeModal('statsModal');updateInventoryUI('dinos');checkAchievements();} // Check achievements after training
+function checkForTrainingCompletion(){gameState.inventory.forEach(i=>{if(i.type==='dinos'&&i.isTraining&&(Date.now()-i.trainingStart>86400000)){i.isTraining=false;i.value=Math.floor(i.value*1.2);i.appearance="Treinado";showNotification(`${i.customName} voltou mais forte!`,"success");checkAchievements();}});} // Check achievements after training completion
+function checkForDeaths(){
+    if(Math.random()<(1e-5/gameState.deathChanceModifier)){
+        const dV=gameState.inventory.filter(i=>i.type==='dinos'&&!i.isTraining);
+        if(dV.length>0){
+            const dD=dV[Math.floor(Math.random()*dV.length)];
+            const i=gameState.inventory.indexOf(dD);
+            const msgs=[`${dD.customName} morreu de intoxicação alimentar! :(`,`${dD.customName} morreu numa briga...`,`${dD.customName} caiu de uma altura muito alta...`];
+            showNotification(msgs[Math.floor(Math.random()*msgs.length)],"death");
+            gameState.inventory.splice(i,1);
+            gameState.totalDeaths = (gameState.totalDeaths || 0) + 1; // Para conquista
+            checkAchievements(); // Check achievements after death
+        }
+    }
+}
+function submitCode(){
+    const i=document.getElementById('codeInput');
+    const c=i.value.trim().toLowerCase();
+    i.value='';
+    const n=Date.now(),t=new Date(n).toDateString(),u=gameState.usedCodes[c];
+    if(u){
+        if(u.type==='once')return showNotification("Código já usado.","error");
+        if(u.type==='daily'&&u.date===t)return showNotification("Código de hoje já usado!","error");
+        if(u.type==='timed'&&n<u.expires)return showNotification(`Aguarde ${Math.ceil((u.expires-n)/36e5)}h.`,"error");
+    }
+    let msg='';
+    switch(c){
+        case'bancoadm':showAdminPanel();return;
+        case'muchmoney':
+            const m=Math.floor(Math.random()*4501)+500;
+            gameState.money+=m;
+            msg=`Você ganhou $${m}!`;
+            gameState.usedCodes[c]={type:'daily',date:t};
+            break;
+        case'fragmentation':
+            const dN=Object.keys(dinosaurs);
+            const rD=dN[Math.floor(Math.random()*dN.length)];
+            gameState.dnaFragments[rD]=(gameState.dnaFragments[rD]||0)+10;
+            msg=`Ganhou 10 fragmentos de DNA de ${rD}!`;
+            gameState.usedCodes[c]={type:'timed',expires:n+432000000};
+            break;
+        case'jurassicpark':
+            if(Math.random()<.5){
+                gameState.money+=1993;
+                msg=`Ganhou $1,993!`;
+            }else{
+                gameState.inventory.push({type:'eggs',dinoName:'Tiranossauro Rex',special:'Rexy'});
+                msg=`Ganhou um ovo da Rexy!`;
+            }
+            gameState.usedCodes[c]={type:'once'};
+            break;
+        case'ladrão pequeno':
+            const sD=Object.keys(dinosaurs).filter(d=>dinosaurs[d].size<3);
+            const ranD=sD[Math.floor(Math.random()*sD.length)];
+            gameState.inventory.push({type:'eggs',dinoName:ranD});
+            msg=`Ganhou um ovo de ${ranD}!`;
+            gameState.usedCodes[c]={type:'once'};
+            break;
+        case'starterpack':
+            gameState.money+=1500;
+            for(let i=0;i<3;i++)gameState.inventory.push({type:'eggs',dinoName:'Compsognato'});
+            gameState.inventory.push({type:'eggs',dinoName:'Pyroraptor'});
+            gameState.activeBoosts.Bloqueador={expires:n+3600000};
+            msg=`Pacote de iniciante recebido!`;
+            gameState.usedCodes[c]={type:'once'};
+            break;
+        case'veterinário':
+            gameState.deathChanceModifier*=.95;
+            msg=`Expectativa de vida dos dinos aumentada!`;
+            gameState.usedCodes[c]={type:'once'};
+            break;
+        case'flash':
+            gameState.activeBoosts.Flash={expires:n+86400000};
+            msg=`Velocidade 2x por 24h!`;
+            gameState.usedCodes[c]={type:'timed',expires:n+86400000 + 86400000}; // Cooldown de 24h
+            break;
+        case'bigger':
+            gameState.money+=5000000;
+            gameState.inventory.push({type:'dinos',...generateStats('Espinossauro',['ruby'],{customName:'Spike'}),isTraining:false});
+            msg=`Ganhou o Spike Rubi e $5M!`;
+            gameState.usedCodes[c]={type:'once'};
+            break;
+        // Novos códigos únicos
+        case 'ovomisterioso':
+            const allDinos = Object.keys(dinosaurs);
+            const randomMysteryDino = allDinos[Math.floor(Math.random() * allDinos.length)];
+            // 20% chance de vir com uma mutação aleatória
+            let mysteryMutations = [];
+            if (Math.random() < 0.2) {
+                const availableMutations = ['golden', 'diamond', 'ruby', 'colorful'];
+                mysteryMutations.push(availableMutations[Math.floor(Math.random() * availableMutations.length)]);
+            }
+            gameState.inventory.push({type:'eggs', dinoName: randomMysteryDino, mutations: mysteryMutations});
+            msg = `Um ovo misterioso apareceu em seu inventário! Pode conter uma surpresa...`;
+            gameState.usedCodes[c] = {type: 'once'}; // Uso único
+            break;
+        case 'negociador':
+            // Reduz o preço de venda de todos os dinos por 3 horas
+            gameState.activeBoosts['Negociador'] = {expires: n + 10800000}; // 3 horas
+            msg = `Seus dinos estão valendo mais no mercado por 3 horas!`;
+            gameState.usedCodes[c] = {type: 'timed', expires: n + 10800000 + 86400000}; // Cooldown de 24h
+            break;
+        case 'dnaaleatorio':
+            const numFragments = Math.floor(Math.random() * 8) + 3; // 3 a 10 fragmentos
+            const randomDinoForFragments = Object.keys(dinosaurs)[Math.floor(Math.random() * Object.keys(dinosaurs).length)];
+            gameState.dnaFragments[randomDinoForFragments] = (gameState.dnaFragments[randomDinoForFragments] || 0) + numFragments;
+            msg = `Você encontrou ${numFragments} fragmentos de DNA de ${randomDinoForFragments}!`;
+            gameState.usedCodes[c] = {type: 'daily', date: t}; // Diário
+            break;
+        case 'treinocelere':
+            // Reduz o tempo de treinamento atual de todos os dinos em 50% (aplicado na próxima verificação)
+            gameState.inventory.forEach(dino => {
+                if (dino.type === 'dinos' && dino.isTraining) {
+                    dino.trainingStart -= (dino.trainingStart + 86400000 - Date.now()) / 2; // Reduz o tempo restante pela metade
+                }
+            });
+            msg = `Seus dinossauros no treinamento ficaram mais rápidos!`;
+            gameState.usedCodes[c] = {type: 'once'}; // Uso único
+            break;
+        case 'dinheiroextra':
+            // 15% de todos os dinossauros no inventário viram dinheiro, com bônus
+            let moneyFromDinos = 0;
+            const dinosToSell = gameState.inventory.filter(d => d.type === 'dinos' && Math.random() < 0.15);
+            dinosToSell.forEach(dino => {
+                moneyFromDinos += dino.value * 1.5; // Vende por 1.5x o valor normal
+                const index = gameState.inventory.indexOf(dino);
+                if (index > -1) {
+                    gameState.inventory.splice(index, 1);
+                }
+            });
+            if (dinosToSell.length > 0) {
+                gameState.money += moneyFromDinos;
+                msg = `Você vendeu ${dinosToSell.length} dinossauros por um bônus de $${moneyFromDinos.toLocaleString()}!`;
+            } else {
+                msg = `Nenhum dinossauro foi vendido desta vez. Tente de novo amanhã!`;
+            }
+            gameState.usedCodes[c] = {type: 'daily', date: t}; // Diário
+            break;
+        default:return showNotification("Código inválido!","error");
+    }
+    showNotification(msg,'success');
+    updateMoneyDisplay();
+    closeModal('codesModal');
+    checkAchievements(); // Check achievements after using a code
+}
 
 // =========================================================================
 // SEÇÃO 6: MECÂNICA DE ROUBO
 // =========================================================================
 function findRobberyTarget(){const tN=document.getElementById('robberyTargetInput').value.trim();if(!tN||tN===currentUser)return showNotification("Alvo inválido!","error");if(gameState.cooldowns.robbery&&Date.now()<gameState.cooldowns.robbery)return showNotification(`Aguarde ${Math.ceil((gameState.cooldowns.robbery-Date.now())/60000)} min.`,'error');const tD=JSON.parse(localStorage.getItem(`cad2_save_${tN}`));if(!tD)return showNotification("Jogador não encontrado.","error");if(tD.activeBoosts?.Bloqueador&&Date.now()<tD.activeBoosts.Bloqueador.expires){gameState.cooldowns.robbery=Date.now()+600000;return showNotification("Alvo protegido! Impossível invadir.","error");}if(tD.activeBoosts?.['Torreta Sentinela']&&Math.random()<0.3){gameState.cooldowns.robbery=Date.now()+1800000;delete tD.activeBoosts['Torreta Sentinela'];saveTargetData(tN,tD);return showNotification("Você foi detectado e repelido por uma torreta!","error");}showNotification(`Observando ${tN}...`,"success");/* Entrar no modo roubo... */}
+// Função placeholder para salvar dados do alvo (não implementada neste escopo)
+function saveTargetData(targetUser, targetData) {
+    localStorage.setItem(`cad2_save_${targetUser}`, JSON.stringify(targetData));
+}
 
 // =========================================================================
 // SEÇÃO 7: NOVAS MECÂNICAS E SISTEMAS ADICIONAIS
 // =========================================================================
-function updateDnaLab(){const c=document.getElementById('dnaLabContainer');if(!c)return;c.innerHTML='<h4>Fragmentos de DNA:</h4>';Object.entries(gameState.dnaFragments).forEach(([d,v])=>{c.innerHTML+=`<div>${d}: ${v}/10 ${v>=10?`<button onclick="craftDino('${d}')">Clonar</button>`:''}</div>`;});}
-function findDnaFragment(force=false){if(force||Math.random()<1e-4){const d=Object.keys(dinosaurs);const fD=d[Math.floor(Math.random()*d.length)];gameState.dnaFragments[fD]=(gameState.dnaFragments[fD]||0)+1;showNotification(`Encontrou 1 fragmento de DNA de ${fD}!`,"success");updateDnaLab();}}
-function craftDino(d){if(gameState.dnaFragments[d]>=10){gameState.dnaFragments[d]-=10;gameState.inventory.push({type:'eggs',dinoName:d});showNotification(`Clonou um ovo de ${d}!`,"success");updateDnaLab();}}
-function checkDailyReward(){const t=new Date().toDateString();if(gameState.lastDailyReward!==t){document.getElementById('dailyRewardTitle').textContent=`Recompensa Diária! (Dia ${gameState.consecutiveDays+1})`;document.getElementById('dailyRewardText').textContent=`Parabéns por voltar!`;showModal('dailyRewardModal');}}
-function claimDailyReward(){const t=new Date(),y=new Date();y.setDate(t.getDate()-1);if(gameState.lastDailyReward===y.toDateString()){gameState.consecutiveDays++;}else{gameState.consecutiveDays=1;}const rM=500*gameState.consecutiveDays;gameState.money+=rM;gameState.lastDailyReward=t.toDateString();showNotification(`Você coletou $${rM}!`,"success");updateMoneyDisplay();closeModal('dailyRewardModal');}
-function updateStatusEffectsUI(){const c=document.getElementById('statusEffectsContainer');if(!c)return;c.innerHTML='';Object.entries(gameState.activeBoosts).forEach(([eN,e])=>{if(Date.now()<e.expires){const r=e.expires-Date.now(),tS=new Date(r).toISOString().substr(11,8);const i=securityItems[eN]||gadgets[eN]||{};const iE=i.emoji||'⭐';c.innerHTML+=`<div class="status-effect">${iE} ${tS}</div>`;}else{delete gameState.activeBoosts[eN];}});}
+function updateDnaLab(){const c=document.getElementById('dnaLabContainer');if(!c)return;c.innerHTML='<h4>Fragmentos de DNA:</h4>';Object.entries(gameState.dnaFragments).forEach(([d,v])=>{c.innerHTML+=`<div>${d}: ${v}/10 ${v>=10?`<button class="cyber-button" onclick="craftDino('${d}')">Clonar</button>`:''}</div>`;});}
+function findDnaFragment(force=false){if(force||Math.random()<1e-4){const d=Object.keys(dinosaurs);const fD=d[Math.floor(Math.random()*d.length)];gameState.dnaFragments[fD]=(gameState.dnaFragments[fD]||0)+1;showNotification(`Encontrou 1 fragmento de DNA de ${fD}!`,"success");updateDnaLab();checkAchievements();}} // Check achievements after finding DNA
+function craftDino(d){if(gameState.dnaFragments[d]>=10){gameState.dnaFragments[d]-=10;gameState.inventory.push({type:'eggs',dinoName:d});showNotification(`Clonou um ovo de ${d}!`,"success");updateDnaLab();checkAchievements();}} // Check achievements after crafting
+
+function checkDailyReward(){
+    const today = new Date();
+    const lastRewardDate = gameState.lastDailyReward ? new Date(gameState.lastDailyReward) : null;
+    const accountCreationDate = new Date(gameState.accountCreationDate);
+
+    // Check if it's a new day for daily reward logic
+    if (!lastRewardDate || lastRewardDate.toDateString() !== today.toDateString()) {
+        const modalTitle = document.getElementById('dailyRewardTitle');
+        const modalText = document.getElementById('dailyRewardText');
+        
+        // Calculate months since account creation
+        const diffMonths = (today.getFullYear() - accountCreationDate.getFullYear()) * 12 + (today.getMonth() - accountCreationDate.getMonth());
+
+        // Check for monthly bonus (first day of the month and at least one month passed)
+        // Ensure lastMonthlyBonusMonth is checked against current month, not total diffMonths
+        if (today.getDate() === 1 && diffMonths > 0 && gameState.lastMonthlyBonusMonth !== today.getMonth()) {
+            modalTitle.textContent = `Bônus Mensal! (Mês ${diffMonths})`;
+            
+            const allDinos = Object.keys(dinosaurs);
+            const commonDinos = allDinos.filter(d => dinosaurs[d].rarity === 'common');
+            const uncommonDinos = allDinos.filter(d => dinosaurs[d].rarity === 'uncommon');
+            const rareDinos = allDinos.filter(d => dinosaurs[d].rarity === 'rare');
+
+            let dinoToAward;
+            const rand = Math.random();
+            if (rand < 0.6) { // 60% chance of common
+                dinoToAward = commonDinos[Math.floor(Math.random() * commonDinos.length)];
+            } else if (rand < 0.9) { // 30% chance of uncommon
+                dinoToAward = uncommonDinos[Math.floor(Math.random() * uncommonDinos.length)];
+            } else { // 10% chance of rare
+                dinoToAward = rareDinos[Math.floor(Math.random() * rareDinos.length)];
+            }
+
+            gameState.inventory.push({type: 'eggs', dinoName: dinoToAward});
+            gameState.lastMonthlyBonusMonth = today.getMonth(); // Save the month for which bonus was given
+            modalText.textContent = `Parabéns! Você ganhou um ovo de ${dinoToAward} (${dinosaurs[dinoToAward].rarity.charAt(0).toUpperCase() + dinosaurs[dinoToAward].rarity.slice(1)})!`;
+            showModal('dailyRewardModal');
+        } else {
+            // Existing daily reward logic (money)
+            if (lastRewardDate && (today.getDate() - lastRewardDate.getDate() === 1 || (today.getMonth() > lastRewardDate.getMonth() && today.getDate() === 1 && lastRewardDate.getDate() !== 31))) {
+                gameState.consecutiveDays++;
+            } else {
+                gameState.consecutiveDays = 1;
+            }
+            const rewardMoney = 500 * gameState.consecutiveDays;
+            modalTitle.textContent = `Recompensa Diária! (Dia ${gameState.consecutiveDays})`;
+            modalText.textContent = `Parabéns por voltar! Você recebeu $${rewardMoney.toLocaleString()}!`;
+            gameState.money += rewardMoney;
+            updateMoneyDisplay();
+            showModal('dailyRewardModal');
+        }
+        gameState.lastDailyReward = today.toDateString(); // Update for the current day after any reward
+    }
+}
+
+function claimDailyReward(){
+    closeModal('dailyRewardModal');
+    checkAchievements(); // Check achievements after claiming daily/monthly reward
+}
+
+function updateStatusEffectsUI(){
+    const c=document.getElementById('statusEffectsContainer');
+    if(!c)return;
+    c.innerHTML='';
+    Object.entries(gameState.activeBoosts).forEach(([eN,e])=>{
+        if(Date.now()<e.expires){
+            const r=e.expires-Date.now(),tS=new Date(r).toISOString().substr(11,8);
+            const i=securityItems[eN]||gadgets[eN]||{};
+            const iE=i.emoji||'⭐';
+            let displayName = eN;
+            // Emojis para novos buffs
+            if (eN === 'Negociador') displayName = '💰';
+            else if (eN === 'Chance de Fragmento') displayName = '🧩';
+
+            c.innerHTML+=`<div class="status-effect">${displayName} ${tS}</div>`;
+        }else{
+            delete gameState.activeBoosts[eN];
+        }
+    });
+}
 function checkActiveEvents(){}
 function showNotification(msg,type='success'){const e=document.getElementById('notification');e.textContent=msg;e.className=`notification ${type} show`;setTimeout(()=>e.classList.remove('show'),4000);}
 function showAdminPanel(){closeModal('codesModal');const u=JSON.parse(localStorage.getItem('cad2_users'))||{};let content='<ul>'+Object.keys(u).map(un=>`<li><b>Usuário:</b> ${un} | <b>Código:</b> ${u[un]}</li>`).join('')+'</ul>';document.getElementById('adminContent').innerHTML=content;showModal('adminModal');}
 
+// Nova função para checar e atualizar conquistas
+function checkAchievements() {
+    for (const key in achievements) {
+        if (!gameState.achievements[key] && achievements[key].check()) {
+            gameState.achievements[key] = true;
+            showNotification(`Conquista Desbloqueada: ${achievements[key].name}!`, 'success');
+            // Recompensa extra para o Espinossauro Rubi
+            if (key === 'Legendary Ruby Spino') {
+                gameState.money += 1000000;
+                showNotification("Recompensa bônus por sua conquista lendária: +$1,000,000!", "success");
+                updateMoneyDisplay();
+            }
+        }
+    }
+}
+
+// Nova função para atualizar a UI das conquistas no modal
+function updateAchievementsUI() {
+    const grid = document.getElementById('achievementsGrid');
+    grid.innerHTML = '';
+    for (const key in achievements) {
+        const achievement = achievements[key];
+        const card = document.createElement('div');
+        card.className = 'item-card achievement-card';
+        card.innerHTML = `<b>${achievement.name}</b><br><p>${achievement.description}</p><small>Raridade: ${achievement.rarity}</small><br><small>${achievement.percent} dos jogadores</small>`;
+        
+        if (gameState.achievements[key]) {
+            card.classList.add('achieved');
+        } else {
+            card.classList.add('locked');
+        }
+        grid.appendChild(card);
+    }
+}
+
 </script>
 </body>
 </html>
-
-
-
-
-
-
